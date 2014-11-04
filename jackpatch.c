@@ -404,7 +404,7 @@ Client_get_ports(Client *self, PyObject *args, PyObject *kwds) {
         jack_port_t *port_handle = jack_port_by_name(self->_client, *port_name);
         if ((port_handle == NULL) || 
             (! jack_port_is_mine(self->_client, port_handle))) {
-          free((void *)port_name++);
+          jack_free((void *)port_name++);
           continue;
         }
       }
@@ -419,7 +419,7 @@ Client_get_ports(Client *self, PyObject *args, PyObject *kwds) {
           return(NULL);
         }
       }
-      free((void *)port_name++);
+      jack_free((void *)port_name++);
     }
   }
   return(return_list);
@@ -474,6 +474,11 @@ Client_dealloc(Client* self) {
   // invalidate references to ports by zeroing the counts
   self->_send_port_count = 0;
   self->_receive_port_count = 0;
+  // free port list memory
+  free(self->_send_ports);
+  free(self->_receive_ports);
+  self->_send_ports = NULL;
+  self->_receive_ports = NULL;
   // remove all events from the send and receive queues
   Message *message = NULL;
   Message *next = NULL;
