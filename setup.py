@@ -10,7 +10,7 @@ import os
 import string
 import time
 
-version = '0.1.0'
+version = '0.1.1'
 
 kwargs = dict()
 if has_setuptools:

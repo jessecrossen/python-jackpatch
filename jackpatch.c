@@ -381,47 +381,46 @@ Client_get_ports(Client *self, PyObject *args, PyObject *kwds) {
   const char *name_pattern = NULL;
   const char *type_pattern = NULL;
   unsigned long flags = 0;
-  PyObject *mine = Py_False;
+  PyObject *mine = NULL;
   static char *kwlist[] = {"name_pattern", "type_pattern", "flags", "mine", NULL};
   if (! PyArg_ParseTupleAndKeywords(args, kwds, "|sskO", kwlist, 
                                     &name_pattern, &type_pattern, &flags, &mine))
     return(NULL);
   // see if we're only listing the ports of this client
-  int mine_only = PyObject_IsTrue(mine);
+  int mine_only = (mine != NULL) ? PyObject_IsTrue(mine) : 0;
   // make sure we're connected to JACK
   Client_open(self);
   if (self->_client == NULL) return(NULL);
   // get a list of port names
-  const char **port_name = jack_get_ports(self->_client, 
+  const char **ports = jack_get_ports(self->_client, 
     name_pattern, type_pattern, flags);
   // convert the port names into a list of Port objects
-  PyObject *return_list;
-  return_list = PyList_New(0);
-  if (port_name != NULL) {
-    while (*port_name != NULL) {
-      // discard outside ports if requested
-      if (mine_only) {
-        jack_port_t *port_handle = jack_port_by_name(self->_client, *port_name);
-        if ((port_handle == NULL) || 
-            (! jack_port_is_mine(self->_client, port_handle))) {
-          jack_free((void *)port_name++);
-          continue;
-        }
+  PyObject *return_list = PyList_New(0);
+  if (return_list == NULL) return(NULL);
+  if (! ports) return(return_list);
+  for (int i = 0; ports[i]; ++i) {
+    // discard outside ports if requested
+    if (mine_only) {
+      jack_port_t *port_handle = jack_port_by_name(self->_client, ports[i]);
+      if ((port_handle == NULL) || 
+          (! jack_port_is_mine(self->_client, port_handle))) {
+        continue;
       }
-      Port *port = (Port *)Port_new(&PortType, NULL, NULL);
-      if (port != NULL) {
-        PyObject *name = PyString_FromString(*port_name);
-        Port_init(port, Py_BuildValue("(O,S)", self, name), Py_BuildValue("{}"));
-        Py_XDECREF(name);
-        if (PyList_Append(return_list, (PyObject *)port) < 0) {
-          _error("Failed to append a port to the list");
-          Py_DECREF(return_list);
-          return(NULL);
-        }
+    }
+    Port *port = (Port *)Port_new(&PortType, NULL, NULL);
+    if (port != NULL) {
+      PyObject *name = PyString_FromString(ports[i]);
+      Port_init(port, Py_BuildValue("(O,S)", self, name), Py_BuildValue("{}"));
+      Py_XDECREF(name);
+      if (PyList_Append(return_list, (PyObject *)port) < 0) {
+        _error("Failed to append a port to the list");
+        Py_DECREF(return_list);
+        jack_free(ports);
+        return(NULL);
       }
-      jack_free((void *)port_name++);
     }
   }
+  jack_free(ports);
   return(return_list);
 }
 
@@ -766,6 +765,7 @@ static void
 Port_dealloc(Port* self) {
   Py_XDECREF(self->name);
   Py_XDECREF(self->client);
+  Py_XDECREF(self->flags);
   self->ob_type->tp_free((PyObject*)self);
 }
 
@@ -1007,27 +1007,27 @@ Port_get_connections(Port *self) {
   Client_open(client);
   if (client->_client == NULL) return(NULL);
   // get a list of port names connected to this port
-  const char **port_name = jack_port_get_all_connections(
+  const char **ports = jack_port_get_all_connections(
     client->_client, self->_port);
   // convert the port names into a list of Port objects
   PyObject *return_list;
   return_list = PyList_New(0);
-  if (port_name != NULL) {
-    while (*port_name != NULL) {
-      Port *port = (Port *)Port_new(&PortType, NULL, NULL);
-      if (port != NULL) {
-        PyObject *name = PyString_FromString(*port_name);
-        Port_init(port, Py_BuildValue("(O,S)", client, name), Py_BuildValue("{}"));
-        Py_XDECREF(name);
-        if (PyList_Append(return_list, (PyObject *)port) < 0) {
-          _error("Failed to append a port to the list");
-          Py_DECREF(return_list);
-          return(NULL);
-        }
+  if (! ports) return(return_list);
+  for (int i = 0; ports[i]; ++i) {
+    Port *port = (Port *)Port_new(&PortType, NULL, NULL);
+    if (port != NULL) {
+      PyObject *name = PyString_FromString(ports[i]);
+      Port_init(port, Py_BuildValue("(O,S)", client, name), Py_BuildValue("{}"));
+      Py_XDECREF(name);
+      if (PyList_Append(return_list, (PyObject *)port) < 0) {
+        _error("Failed to append a port to the list");
+        Py_DECREF(return_list);
+        jack_free(ports);
+        return(NULL);
       }
-      free((void *)port_name++);
     }
   }
+  jack_free(ports);
   return(return_list);
 }
 
