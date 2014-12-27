@@ -999,6 +999,75 @@ Port_receive(Port *self) {
   Py_RETURN_NONE;
 }
 
+// remove all events from the send queue
+static PyObject *
+Port_clear_send(Port *self) {
+  Client *client = (Client *)self->client;
+  // skip receiving if the queue is empty
+  if (client->_midi_send_queue_head == NULL) Py_RETURN_NONE;
+  // ensure the send queue isn't changed while we're adding to it
+  pthread_mutex_t *lock = &(client->_midi_send_queue_lock);
+  pthread_mutex_lock(lock);
+  // remove all messages for this port from the send queue
+  Message *last = NULL;
+  Message *message = client->_midi_send_queue_head;
+  Message *next = NULL;
+  jack_port_t *port = self->_port;
+  while (message != NULL) {
+    if (message->port == port) {
+      next = (Message *)message->next;
+      message->next = NULL;
+      if (last != NULL) last->next = next;
+      if (message == client->_midi_send_queue_head) {
+        client->_midi_send_queue_head = next;
+      }
+      free(message);
+      message = next;
+      continue;
+    }
+    last = message;
+    message = (Message *)message->next;
+  }
+  pthread_mutex_unlock(lock);
+  Py_RETURN_NONE;
+}
+
+// remove all events from the receive queue
+static PyObject *
+Port_clear_receive(Port *self) {
+  Client *client = (Client *)self->client;
+  // skip receiving if the queue is empty
+  if (client->_midi_receive_queue_head == NULL) Py_RETURN_NONE;
+  // ensure the receive queue isn't changed while we're adding to it
+  pthread_mutex_t *lock = &(client->_midi_receive_queue_lock);
+  pthread_mutex_lock(lock);
+  // remove all messages for this port from the receive queue
+  Message *last = NULL;
+  Message *message = client->_midi_receive_queue_head;
+  Message *next = NULL;
+  jack_port_t *port = self->_port;
+  while (message != NULL) {
+    if (message->port == port) {
+      next = (Message *)message->next;
+      message->next = NULL;
+      if (last != NULL) last->next = next;
+      if (message == client->_midi_receive_queue_head) {
+        client->_midi_receive_queue_head = next;
+      }
+      if (message == client->_midi_receive_queue_tail) {
+        client->_midi_receive_queue_tail = last;
+      }
+      free(message);
+      message = next;
+      continue;
+    }
+    last = message;
+    message = (Message *)message->next;
+  }
+  pthread_mutex_unlock(lock);
+  Py_RETURN_NONE;
+}
+
 // get all ports connected to the given port
 static PyObject *
 Port_get_connections(Port *self) {
@@ -1046,6 +1115,10 @@ static PyMethodDef Port_methods[] = {
       "Send a tuple of ints as a MIDI message to the port"},
     {"receive", (PyCFunction)Port_receive, METH_NOARGS,
       "Receive a MIDI message from the port"},
+    {"clear_send", (PyCFunction)Port_clear_send, METH_NOARGS,
+      "Remove all messages from the port's send queue"},
+    {"clear_receive", (PyCFunction)Port_clear_receive, METH_NOARGS,
+      "Remove all messages from the port's receive queue"},
     {"get_connections", (PyCFunction)Port_get_connections, METH_NOARGS,
       "Get all the ports connected to this one"},
     {NULL, NULL, 0, NULL}  /* Sentinel */
