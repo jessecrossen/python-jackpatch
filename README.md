@@ -27,11 +27,11 @@ Using
 This module aims to be as Pythonic as possible, which isn't too hard given 
 JACK's brilliantly designed API. Before you can do anything, you'll need to 
 create a client that gives your application a presence on the JACK server. The 
-client needs a name, which can be whatever you want. You can use the open 
+client needs a name, which can be whatever you want. You can use the `open` 
 methods to connect the client to the JACK server, but generally you won't need 
 to because any other method that requires an open connection will call it for 
-you. Similarly, you don't usually need to call close, as things will get 
-cleaned up when your program exits. Calling open or close multiple times does
+you. Similarly, you don't usually need to call `close`, as things will get 
+cleaned up when your program exits. Calling `open` or `close` multiple times does
 no harm.
 
 ```python
@@ -50,7 +50,7 @@ print(client.is_open)                    # False
 
 Having a client allows you to list and create ports, which are endpoints that 
 can be connected to transmit audio or MIDI data between JACK clients. You can 
-list existing ports with the get_ports method. Keep in mind that calling this
+list existing ports with the `get_ports` method. Keep in mind that calling this
 method again will return a new list of distinct jackpatch.Port instances that 
 point to the same ports. You can pass regex pattern strings for the name and 
 type of the port, and a set of flags to filter for port characteristics:
@@ -100,7 +100,7 @@ for port in client.get_ports(mine=True):
 Ports can be connected and disconnected by a client, whether they belong to 
 that client or not. The order of parameters is important when connecting and 
 disconnecting: the first port must be an output port and the second must be 
-an input port. Connection ports that are already connected or disconnecting 
+an input port. Connecting ports that are already connected or disconnecting 
 ones that aren't connected has no consequences. Any port can list all the ports 
 connected to it. Keep in mind that ports listed this way are new objects that 
 won't be the same as existing instances.
@@ -145,7 +145,7 @@ midi_out.send((0x80, 0x24, 0x7F), 0.5)
 
 ```
 
-To receive MIDI events on an imput port, you'll generally want to poll 
+To receive MIDI events on an input port, you'll generally want to poll 
 periodically for messages. Since received messages are tagged with the current
 transport time when they were received, you can get excellent time accuracy
 without polling very often, but if you want to do something with the messages
@@ -158,9 +158,9 @@ Events are returned as a tuple with the first member being a sequence of
 numeric byte values and the second being the transport time at which the event 
 was received in seconds. If the transport isn't rolling, the time will always 
 be wherever the transport is stopped, which isn't that useful. Each call to 
-receive will return at most one message, so you may need to call it several 
+`receive` will return at most one message, so you may need to call it several 
 times to empty the queue. When there are no more events on the queue, the 
-receive method will return None, signalling that you should probably wait until 
+`receive` method will return None, signalling that you should probably wait until 
 more events can arrive before polling again. The following code implements a 
 simple pass-through that sends its input to its output and prints everything 
 that passes through it.
@@ -187,7 +187,7 @@ JACK also includes a transport, which is basically a device for keeping track
 of a point on a timeline and advancing it at a steady rate. The timeline 
 could represent the duration of an audio recording, movie, dance, animation, or 
 anything else that has a temporal dimension. This module gives you a class to 
-access JACK's transport from any client via the transport attribute. You can 
+access JACK's transport from any client via the `transport` attribute. You can 
 get and set the current time on the transport, as well as test and control 
 whether it's rolling, i.e. advancing automatically.
 
