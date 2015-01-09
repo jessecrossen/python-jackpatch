@@ -1,13 +1,13 @@
 jackpatch
 ====
 
-This is a module that exposes some of the functionality of the 
-[JACK Audio Connection Kit](http://jackaudio.org/) for use in Python programs.
-Since JACK is a realtime audio server and Python isn't going to be the best at
-audio processing at realtime speeds, this module only exposes JACK functionality 
-that either doesn't need to be realtime (such as managing ports, patchbay 
-connections, and the transport) or that can be handled with a queue and poll
-architecture (just MIDI send and receive at this point).
+This is a Python 2 module that exposes some of the functionality of the 
+[JACK Audio Connection Kit](http://jackaudio.org/). Since JACK is a realtime 
+audio server and Python isn't going to be the best at audio processing at 
+realtime speeds, this module only exposes JACK functionality that either doesn't 
+need to be realtime (such as managing ports, patchbay connections, and the 
+transport) or that can be handled with a queue and poll architecture (just MIDI 
+send and receive at this point).
 
 Installing
 ====
