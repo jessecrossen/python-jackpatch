@@ -256,6 +256,7 @@ Client_send_messages_for_port(Client *self, jack_port_t *port,
 static void
 Client_receive_messages_for_port(Client *self, jack_port_t *port, 
                                  jack_nframes_t nframes) {
+  int i;
   int result;
   Message *message = NULL;
   // get a readable buffer for the port
@@ -280,7 +281,7 @@ Client_receive_messages_for_port(Client *self, jack_port_t *port,
   pthread_mutex_lock(lock);
   // receive events
   jack_midi_event_t event;
-  for (int i = 0; i < event_count; i++) {
+  for (i = 0; i < event_count; i++) {
     result = jack_midi_event_get(&event, port_buffer, i);
     if (result != 0) {
       #ifdef WARN_IN_PROCESS
@@ -378,6 +379,7 @@ Client_deactivate(Client *self) {
 //  clients unless the "mine" parameter is set to True)
 static PyObject *
 Client_get_ports(Client *self, PyObject *args, PyObject *kwds) {
+  int i;
   const char *name_pattern = NULL;
   const char *type_pattern = NULL;
   unsigned long flags = 0;
@@ -398,7 +400,7 @@ Client_get_ports(Client *self, PyObject *args, PyObject *kwds) {
   PyObject *return_list = PyList_New(0);
   if (return_list == NULL) return(NULL);
   if (! ports) return(return_list);
-  for (int i = 0; ports[i]; ++i) {
+  for (i = 0; ports[i]; ++i) {
     // discard outside ports if requested
     if (mine_only) {
       jack_port_t *port_handle = jack_port_by_name(self->_client, ports[i]);
@@ -782,7 +784,7 @@ Port_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 static int
 Port_init(Port *self, PyObject *args, PyObject *kwds) {
   char *requested_name = NULL;
-  PyObject *name = NULL, *tmp;
+  PyObject *tmp = NULL;
   Client *client = NULL;
   unsigned long flags = 0;
   static char *kwlist[] = { "client", "name", "flags", NULL };
@@ -849,7 +851,7 @@ Port_init(Port *self, PyObject *args, PyObject *kwds) {
 
 static PyObject *
 Port_send(Port *self, PyObject *args) {
-  int status;
+  size_t i;
   PyObject *data;
   double time = 0.0;
   if (! PyArg_ParseTuple(args, "O|d", &data, &time)) return(NULL);
@@ -885,7 +887,7 @@ Port_send(Port *self, PyObject *args) {
   message->data_size = bytes;
   unsigned char *mdata = message->data;
   long value;
-  for (size_t i = 0; i < bytes; i++) {
+  for (i = 0; i < bytes; i++) {
     value = PyInt_AsLong(PySequence_ITEM(data, i));
     if ((value == -1) && (PyErr_Occurred())) return(NULL);
     *mdata = (unsigned char)(value & 0xFF);
@@ -1071,6 +1073,7 @@ Port_clear_receive(Port *self) {
 // get all ports connected to the given port
 static PyObject *
 Port_get_connections(Port *self) {
+  int i;
   // make sure we're connected to JACK
   Client *client = (Client *)self->client;
   Client_open(client);
@@ -1082,7 +1085,7 @@ Port_get_connections(Port *self) {
   PyObject *return_list;
   return_list = PyList_New(0);
   if (! ports) return(return_list);
-  for (int i = 0; ports[i]; ++i) {
+  for (i = 0; ports[i]; ++i) {
     Port *port = (Port *)Port_new(&PortType, NULL, NULL);
     if (port != NULL) {
       PyObject *name = PyString_FromString(ports[i]);
